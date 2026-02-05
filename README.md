@@ -66,6 +66,32 @@ co.eci.snake
 
 > Objetivo didáctico: practicar suspensión/continuación **sin** espera activa y consolidar el modelo de monitores en Java.
 
+**Reporte de laboratorio**
+1. Data races encontradas y su solución.
+  - Al revisar el codigo nos encontramos que hay condiciones de carrera al leer los primos, porque mientras se leen puede que tambien se escriban. Para solucionar esto utilizamos un lock llamado primesLock que se comprueba antes de retornar el valor de primes en getprimes().
+
+2. Colecciones mal usadas y cómo se protegieron (o sustituyeron).
+  - Se identifico el uso de LinkedList, que no es thread-safe. Se protegióo mediante sincronizacion con `primesLock` en todas las operaciones de lectura/escritura. Adicionalmente, getPrimes() retorna una copia defensiva para evitar que modificaciones externas afecten la lista original.
+
+3. Esperas activas eliminadas y mecanismo utilizado.
+  - Se evito el uso de espera activa (busy-waiting) mediante el patron wait/notify. Cuando un hilo debe pausarse, no verifica continuamente una bandera consumiendo CPU, sino que usa `pauseLock.wait()` para suspenderse hasta que otro hilo llame a `pauseLock.notifyAll()`. Esto libera recursos del procesador mientras los hilos están pausados.
+
+4. Regiones críticas definidas y justificación de su **alcance mínimo**.
+  - Se definieron 3 regiones críticas:
+  
+    - Pausa/reanudacion (pauseLock):
+       - Alcance: Solo el bloque while(paused) con wait()
+       - Justificación: Excluye isPrime() e I/O (println) del lock. Solo protege la verificacion y espera de pausa.
+    
+    - Escritura de primos (primesLock):
+       - Alcance: Solo primes.add(i)
+       - Justificación: isPrime() está fuera del lock (es calculo puro sin estado compartido). println() esta fuera para no bloquear otros hilos durante I/O.
+    
+    - Lectura de primos (primesLock):
+       - Alcance: Solo la creacion de la copia defensiva
+       - Justificación: Retorna una copia para que el hilo llamador pueda iterar sin mantener el lock, minimizando contencion.
+
+> Observacion: El programa falla si la tecla que se oprime no es Enter.
 ---
 
 ## Parte II — SnakeRace concurrente (núcleo del laboratorio)
