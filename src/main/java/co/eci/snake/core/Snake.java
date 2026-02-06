@@ -32,8 +32,6 @@ public final class Snake {
     this.direction = dir;
   }
 
-  // ====== MÉTODOS CRÍTICOS SINCRONIZADOS ======
-
   public synchronized Position head() {
     return body.peekFirst();
   }
@@ -42,15 +40,13 @@ public final class Snake {
     return new ArrayDeque<>(body);
   }
 
+  public synchronized int length() {
+    return body.size();
+  }
+
   public synchronized void advance(Position newHead, boolean grow) {
     body.addFirst(newHead);
-
-    if (grow) {
-      maxLength++;
-    }
-
-    while (body.size() > maxLength) {
-      body.removeLast();
-    }
+    if (grow) maxLength++;
+    while (body.size() > maxLength) body.removeLast();
   }
 }

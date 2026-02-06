@@ -167,12 +167,19 @@ co.eci.snake
   - La **serpiente viva más larga**.
   - La **peor serpiente** (la que **primero murió**).
 - Considera que la suspensión **no es instantánea**; coordina para que el estado mostrado no quede “a medias”.
+  ![](images/0.png)
+
 
 ### 4) Robustez bajo carga
 
 - Ejecuta con **N alto** (`-Dsnakes=20` o más) y/o aumenta la velocidad.
 - El juego **no debe romperse**: sin `ConcurrentModificationException`, sin lecturas inconsistentes, sin _deadlocks_.
 - Si habilitas **teleports** y **turbo**, verifica que las reglas no introduzcan carreras.
+
+  ![](images/1.png)
+
+  Como se muestra en la imagen con un -Dsnakes=30 despues de unos minutos se sigue ejecutando sin error ninguno 
+
 
 > Entregables detallados más abajo.
 

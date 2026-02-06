@@ -19,6 +19,10 @@ public final class SnakeApp extends JFrame {
   private final JButton actionButton;
   private final GameClock clock;
   private final java.util.List<Snake> snakes = new java.util.ArrayList<>();
+  private final JLabel bestLabel;
+  private final JLabel worstLabel;
+  private final AtomicReference<GameState> gameState =
+          new AtomicReference<>(GameState.RUNNING);
 
 
   public SnakeApp() {
@@ -35,6 +39,8 @@ public final class SnakeApp extends JFrame {
 
     this.gamePanel = new GamePanel(board, () -> snakes);
     this.actionButton = new JButton("Action");
+    this.bestLabel = new JLabel("Mejor: -");
+    this.worstLabel = new JLabel("Peor: -");
 
     setLayout(new BorderLayout());
     add(gamePanel, BorderLayout.CENTER);
@@ -52,6 +58,11 @@ public final class SnakeApp extends JFrame {
     snakes.forEach(s -> exec.submit(new SnakeRunner(s, board, gameState)));
 
     actionButton.addActionListener((ActionEvent e) -> togglePause());
+    JPanel controls = new JPanel();
+    controls.add(actionButton);
+    controls.add(bestLabel);
+    controls.add(worstLabel);
+    add(controls, BorderLayout.SOUTH);
 
     gamePanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("SPACE"), "pause");
     gamePanel.getActionMap().put("pause", new AbstractAction() {
@@ -130,14 +141,36 @@ public final class SnakeApp extends JFrame {
   }
 
   private void togglePause() {
-    if ("Action".equals(actionButton.getText())) {
-      actionButton.setText("Resume");
+    if (gameState.get() == GameState.RUNNING) {
+      gameState.set(GameState.PAUSED);
       clock.pause();
+      actionButton.setText("Resume");
+      updateStats();
     } else {
-      actionButton.setText("Action");
+      gameState.set(GameState.RUNNING);
       clock.resume();
+      actionButton.setText("Action");
     }
+
   }
+
+  private void updateStats() {
+    Snake mejor = null;
+    Snake peor = null;
+
+    for (Snake s : snakes) {
+      if (mejor == null || s.length() > mejor.length()) {
+        mejor = s;
+      }
+      if (peor == null || s.length() < peor.length()) {
+        peor = s;
+      }
+    }
+
+    bestLabel.setText("Mejor: " + (mejor != null ? mejor.length() : "-"));
+    worstLabel.setText("Peor: " + (peor != null ? peor.length() : "-"));
+  }
+
 
   public static final class GamePanel extends JPanel {
     private final Board board;
