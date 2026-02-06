@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 public final class Snake {
+
   private final Deque<Position> body = new ArrayDeque<>();
   private volatile Direction direction;
   private int maxLength = 5;
@@ -17,23 +18,33 @@ public final class Snake {
     return new Snake(new Position(x, y), dir);
   }
 
-  public Direction direction() { return direction; }
+  public Direction direction() {
+    return direction;
+  }
 
   public void turn(Direction dir) {
     if ((direction == Direction.UP && dir == Direction.DOWN) ||
-        (direction == Direction.DOWN && dir == Direction.UP) ||
-        (direction == Direction.LEFT && dir == Direction.RIGHT) ||
-        (direction == Direction.RIGHT && dir == Direction.LEFT)) {
+            (direction == Direction.DOWN && dir == Direction.UP) ||
+            (direction == Direction.LEFT && dir == Direction.RIGHT) ||
+            (direction == Direction.RIGHT && dir == Direction.LEFT)) {
       return;
     }
     this.direction = dir;
   }
 
-  public Position head() { return body.peekFirst(); }
+  public synchronized Position head() {
+    return body.peekFirst();
+  }
 
-  public Deque<Position> snapshot() { return new ArrayDeque<>(body); }
+  public synchronized Deque<Position> snapshot() {
+    return new ArrayDeque<>(body);
+  }
 
-  public void advance(Position newHead, boolean grow) {
+  public synchronized int length() {
+    return body.size();
+  }
+
+  public synchronized void advance(Position newHead, boolean grow) {
     body.addFirst(newHead);
     if (grow) maxLength++;
     while (body.size() > maxLength) body.removeLast();

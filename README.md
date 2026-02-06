@@ -1,3 +1,7 @@
+### Escuela Colombiana de Ingeniería
+### Arquitecturas de Software - ARSW
+### Yojhan Toro - Ivan Cubillos
+
 # Snake Race — ARSW Lab #2 (Java 21, Virtual Threads)
 
 **Escuela Colombiana de Ingeniería – Arquitecturas de Software**  
@@ -99,16 +103,66 @@ co.eci.snake
 ### 1) Análisis de concurrencia
 
 - Explica **cómo** el código usa hilos para dar autonomía a cada serpiente.
+
+  Encontramos que el codigo implementa hilos de las siguientes manera:
+
+  En este proyecto cada serpiente se mueve sola usando hilos esto se hace con la clase SnakeRunner que implementa Runnable, así cada serpiente tiene su propio hilo y pueden moverse casi al mismo tiempo sin depender de las otras
+
+  Dentro del método run() hay un ciclo infinito la serpiente puede girar luego intenta avanzar en el tablero revisa si comió algo y después se detiene un momento con Thread.sleep(), ese sleep sirve para controlar la velocidad y también para que el hilo no use CPU sin necesidad
+
+  El juego tiene un reloj central llamado GameClock este usa un ScheduledExecutorService para ejecutar una acción llamada tick solo cuando el juego está en estado RUNNING, el estado se guarda en un AtomicReference lo que permite cambiar entre RUNNING PAUSED y STOPPED de forma segura entre hilos
+
+
 - **Identifica** y documenta en **`el reporte de laboratorio`**:
   - Posibles **condiciones de carrera**.
+
+    Aunque el tablero está protegido con synchronized en el método step igual pueden aparecer problemas de concurrencia porque solo una serpiente puede moverse a la vez entonces se evita dañar los datos pero se pierde mucho paralelismo y si hay muchas serpientes todas tienen que esperar su turno lo que puede volver el juego más lento además la clase Snake también es delicada porque su cuerpo usa un ArrayDeque que no es thread safe y los métodos que leen o modifican ese cuerpo como advance snapshot y head no están sincronizados entonces si otro hilo como el de la interfaz gráfica intenta leer la serpiente mientras se mueve pueden aparecer lecturas inconsistentes estados raros o errores de concurrencia aunque la dirección es un poco más segura porque está marcada como volatile y eso sí garantiza visibilidad entre hilos
+
   - **Colecciones** o estructuras **no seguras** en contexto concurrente.
+
+    En Snake:
+    - ArrayDeque que es no thread-safe.
+    - Accesos sin sincronizació
+  
+    En Board:
+    - HashSet y HashMap tampoco son thread-safe.
+    - Sin embargo, aquí están protegidos indirectamente porque los métodos que los usan están sincronizados.
+    - Esto los vuelve seguros, pero a costa de rendimient
+
   - Ocurrencias de **espera activa** (busy-wait) o de sincronización innecesaria.
+
+    En este código realmente no hay busy wait y eso es bueno porque las serpientes no se quedan en un ciclo gastando CPU sino que usan Thread.sleep() que es una espera bloqueante y más eficiente pero donde sí puede haber problema es en la sincronización del tablero ya que el synchronized en todo el método step() hace que el movimiento de las serpientes sea casi secuencial entonces aunque se evita dañar los datos también se pierde mucha concurrencia real en cambio el GameClock está mejor diseñado porque usa ScheduledExecutorService y AtomicReference lo que permite controlar el estado del juego de forma segura sin bloqueos pesados ni esperas innecesarias
 
 ### 2) Correcciones mínimas y regiones críticas
 
 - **Elimina** esperas activas reemplazándolas por **señales** / **estados** o mecanismos de la librería de concurrencia.
+
+  En SnakeRunner.run() hay un ciclo infinito que solo se detiene si el hilo es interrumpido.
+  Aunque usa Thread.sleep() y no es un busy wait puro, la serpiente sigue ejecutándose incluso si el juego está en pausa o detenido, porque no consulta el GameState.
+
+  El riesgo es que los hilos siguen activos sin necesidad y pueden consumir recursos cuando el juego debería estar detenido para solucionarlo podemos Hacer que SnakeRunner consulte el estado del juego por ejemplo el GameClock o una referencia compartida de GameState y si está en PAUSED esperar con wait() y si está en STOPPED entonces terminar el hilo.
+
 - Protege **solo** las **regiones críticas estrictamente necesarias** (evita bloqueos amplios).
+
+  En Board.step(Snake snake) el método completo está marcado como:
+
+  public synchronized MoveResult step(Snake snake)
+
+  Esto bloquea todo el movimiento del tablero entonces solo una serpiente puede moverse a la vez, no hay corrupción de datos pero sí perdida fuerte de paralelismo y rendimiento para mejorarlo podemos quitar el synchronized del método completo y sincronizar solo las partes donde se modifican colecciones compartidas por ejemplo:
+
+  - Eliminación de ratón o turbo
+  - Creación de nuevos elementos
+  - Acceso a teleports
+
+  así varias serpientes pueden calcular su movimiento en paralelo y solo se bloquean cuando realmente escriben en el tablero
+
 - Justifica en **`el reporte de laboratorio`** cada cambio: cuál era el riesgo y cómo lo resuelves.
+
+  En la clase snake en la linea: 
+
+  private final Deque<Position> body = new ArrayDeque();
+
+  Los metodos advance(), head() y snapshot() no tienen sincronización si otro hilo por ejemplo la GUI lee la serpiente mientras se mueve pueden aparecer lecturas inconsistentes o errores de concurrencia por lo que se tienen que sincronizar.
 
 ### 3) Control de ejecución seguro (UI)
 
@@ -117,12 +171,19 @@ co.eci.snake
   - La **serpiente viva más larga**.
   - La **peor serpiente** (la que **primero murió**).
 - Considera que la suspensión **no es instantánea**; coordina para que el estado mostrado no quede “a medias”.
+  ![](images/0.png)
+
 
 ### 4) Robustez bajo carga
 
 - Ejecuta con **N alto** (`-Dsnakes=20` o más) y/o aumenta la velocidad.
 - El juego **no debe romperse**: sin `ConcurrentModificationException`, sin lecturas inconsistentes, sin _deadlocks_.
 - Si habilitas **teleports** y **turbo**, verifica que las reglas no introduzcan carreras.
+
+  ![](images/1.png)
+
+  Como se muestra en la imagen con un -Dsnakes=30 despues de unos minutos se sigue ejecutando sin error ninguno 
+
 
 > Entregables detallados más abajo.
 
