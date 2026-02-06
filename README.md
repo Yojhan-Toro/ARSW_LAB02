@@ -1,3 +1,7 @@
+### Escuela Colombiana de Ingeniería
+### Arquitecturas de Software - ARSW
+### Yojhan Toro - Ivan Cubillos
+
 # Snake Race — ARSW Lab #2 (Java 21, Virtual Threads)
 
 **Escuela Colombiana de Ingeniería – Arquitecturas de Software**  
